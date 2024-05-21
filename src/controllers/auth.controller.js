@@ -3,7 +3,19 @@ import {asyncHandler} from '../utils/asyncHandler.js'
 import {apiError} from '../utils/apiError.js'
 import {apiResponse} from '../utils/apiResponse.js'
 import { uploadToCloudinary } from '../utils/uploadToCloudinary.js';
+import {COOKIE_OPTIONS} from '../constant.js'
 
+
+const assignAccessAndRefreshToken = async(userId) => {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+
+    user.refreshToken = refreshToken;
+    await user.save({validateBeforeSave: false});
+
+    return {accessToken, refreshToken}
+}
 
 const registerUser = asyncHandler(async(req, res, next) => {
     // accept data from client
@@ -51,4 +63,27 @@ const registerUser = asyncHandler(async(req, res, next) => {
 
 })
 
-export {registerUser}
+const login = asyncHandler(async (req, res, next) => {
+    // get email password from client
+    // validate credentials
+    // check for user from db
+    // validate for password
+    // generate access refresh token => store refreshToken in DB & send both to client via res & cookie
+    const {email, password} = req.body;
+    if(!(email || password)) return next(new apiError(400, 'email password are required'));
+
+    const user = await User.findOne({email});
+    if(!user) return next(new apiError(404, 'user does not exist'));
+
+    if(!user.isPasswordCorrect(password, user.password)) return next(new apiError(400, 'invalid user credentials'));
+
+    user.password = undefined;
+    const {accessToken, refreshToken} = await assignAccessAndRefreshToken(user._id)
+
+    res.status(200)
+    .cookie('accessToken', accessToken, COOKIE_OPTIONS)
+    .cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
+    .json(new apiResponse(200, {user,accessToken, refreshToken}, 'user logged in successfully'))
+})
+
+export {registerUser, login}
