@@ -31,6 +31,7 @@ const userSchema = mongoose.Schema({
     },
     confirmPassword: {
         type: String,
+        required: [true, 'confirm password is required'],
         validate: {
             validator: function (value) {
                 return value === this.password;
@@ -42,6 +43,10 @@ const userSchema = mongoose.Schema({
     refreshtoken: String
 }, {timestamps: true})
 
+userSchema.pre('save', function(next) {
+    this.confirmPassword = undefined;
+    next()
+})
 
 userSchema.pre('save', async function(next) {
     if(!this.isModified('password')) return next();

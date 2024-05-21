@@ -21,7 +21,9 @@ const registerUser = asyncHandler(async(req, res, next) => {
     if([fullName, username, email, password, confirmPassword].some(el => el === ''))
         return next(new apiError(400, 'all fields are required'));
 
-    const userExistance = await User.findOne({email});
+    const userExistance = await User.findOne({
+        $or: [{email}, {username}]
+    });
     if(userExistance) return next(new apiError(400, 'user with these credentials already exists'));
 
     const avatarLocalPath = req.file?.path;
@@ -35,8 +37,12 @@ const registerUser = asyncHandler(async(req, res, next) => {
         fullName,
         email,
         password,
-        avatar: avatar?.url
+        confirmPassword,
+        avatar: avatar?.url,
     });
+
+    createdUser.password = undefined;
+    createdUser.__v = undefined;
 
     if(!createdUser)
         return next(new apiError(500, 'something went wrong while creating new user. try again later'));
