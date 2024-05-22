@@ -11,7 +11,6 @@ export const uploadToCloudinary = async (localFilePath) => {
     })
     try {
         if(!localFilePath) return null;
-        console.log(localFilePath)
         const cldResponse = await cloudinary.uploader.upload(localFilePath, {
             resource_type: 'auto'
         });
